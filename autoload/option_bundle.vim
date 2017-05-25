@@ -1,5 +1,7 @@
 let s:option_bundles = {}
 
+echom 'Sup!'
+
 fun! GetOpposite(truthy)
 	if a:truthy
 		return 0
@@ -10,12 +12,13 @@ endfun
 
 fun! option_bundle#create(bundle_name, is_enabled_by_default, flags_list)
 	let l:bundle = {
+				\ 'bundle_name': a:bundle_name,
 				\ 'is_globally_enabled': GetOpposite(a:is_enabled_by_default),
 				\ 'flags_list': a:flags_list,
-				\ 'enabled_for_buffer': {}
+				\ 'enabled_for_buffer': {},
 				\ }
 
-	fun! _set_options(should_enable, is_local) dict
+	fun! l:bundle._SetOption(should_enable, is_local) dict
 		let l:setter = 'set'
 		if a:is_local
 			let l:setter = l:setter . 'local'
@@ -26,42 +29,48 @@ fun! option_bundle#create(bundle_name, is_enabled_by_default, flags_list)
 			execute l:setter . ' ' . l:modifier . l:flag
 		endfor
 
-		echo (a:should_enable ? 'Enabled' : 'Disabled') . (a:is_local ? ' local ' : ' ') . a:bundle_name
+		echo (a:should_enable ? 'Enabled' : 'Disabled') . ' ' . (a:is_local ? 'local' : 'global') . ' ' . self.bundle_name
 	endfun
 
-	fun! is_global_enabled() dict
+	fun! l:bundle.IsGlobalEnabled() dict
 		return self.is_globally_enabled
 	endfun
 
-	fun! set_global(should_enable) dict
+	fun! l:bundle.SetGlobalTo(should_enable) dict
 		if self.is_globally_enabled != a:should_enable
-			self.is_globally_enabled = a:should_enable
-			self._set_options(a:should_enable, 0)
+			let self.is_globally_enabled = a:should_enable
+			call self._SetOption(a:should_enable, 0)
 		endif
 	endfun
 
-	fun! toggle_global() dict
-		let l:toggle_flag = GetOpposite(self.is_global_enabled())
-		call self.set_global_to(l:toggle_flag)
+	fun! l:bundle.ToggleGlobal() dict
+		let l:toggle_flag = GetOpposite(self.IsGlobalEnabled())
+		call self.SetGlobalTo(l:toggle_flag)
 	endfun
 
-	fun! is_local_enabled() dict
-		return self.enabled_for_buffer[bufnr('%')]
-
-	fun! set_local(should_enable) dict
+	fun! l:bundle.IsLocalEnabled() dict
 		let l:buffer_id = bufnr('%')
-		if self.enabled_for_buffer[l:buffer_id]
-			let self.enabled_for_buffer[l:buffer_id] = a:should_enable
-			call self._set_options(a:should_enable, 1)
+		if !has_key(self.enabled_for_buffer, l:buffer_id)
+			let self.enabled_for_buffer[l:buffer_id] = self.is_globally_enabled
+		endif
+		return self.enabled_for_buffer[l:buffer_id]
 	endfun
 
-	fun! toggle_local() dict
-		let l:toggle_flag = GetOpposite(self.is_local_enabled())
-		call self.set_local_to(l:toggle_flag)
+	fun! l:bundle.SetLocalTo(should_enable) dict
+		if self.IsLocalEnabled() != a:should_enable
+			let l:buffer_id = bufnr('%')
+			let self.enabled_for_buffer[l:buffer_id] = a:should_enable
+			call self._SetOption(a:should_enable, 1)
+		endif
+	endfun
+
+	fun! l:bundle.ToggleLocal() dict
+		let l:toggle_flag = GetOpposite(self.IsLocalEnabled())
+		call self.SetLocalTo(l:toggle_flag)
 	endfun
 
 	let s:option_bundles[a:bundle_name] = l:bundle
-	call l:bundle.set_global_to(a:is_enabled_by_default, 0)
+	call l:bundle.SetGlobalTo(a:is_enabled_by_default)
 	return l:bundle
 endfun
 
