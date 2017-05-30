@@ -28,8 +28,6 @@ fun! option_bundle#create(bundle_name, is_enabled_by_default, flags_list)
 		for l:flag in self.flags_list
 			execute l:setter . ' ' . l:modifier . l:flag
 		endfor
-
-		echo (a:should_enable ? 'Enabled' : 'Disabled') . ' ' . (a:is_local ? 'local' : 'global') . ' ' . self.bundle_name
 	endfun
 
 	fun! l:bundle.IsGlobalEnabled() dict
