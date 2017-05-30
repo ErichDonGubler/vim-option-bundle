@@ -1,7 +1,5 @@
 let s:option_bundles = {}
 
-echom 'Sup!'
-
 fun! GetOpposite(truthy)
 	if a:truthy
 		return 0
